@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Python Trainer 🐍</title>
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f0f1a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      padding: 24px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      border-bottom: 1px solid #3730a3;
+    }
+
+    header h1 { font-size: 1.6rem; font-weight: 700; }
+    header p { font-size: 0.9rem; color: #a5b4fc; margin-top: 4px; }
+
+    .snake { font-size: 2rem; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: calc(100vh - 88px);
+    }
+
+    /* Sidebar */
+    .sidebar {
+      background: #13131f;
+      border-right: 1px solid #1e1b4b;
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+
+    .sidebar-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #6366f1;
+      padding: 0 16px 12px;
+    }
+
+    .exercise-item {
+      padding: 12px 16px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .exercise-item:hover { background: #1a1a2e; border-left-color: #4f46e5; }
+    .exercise-item.active { background: #1e1b4b; border-left-color: #6366f1; }
+    .exercise-item.done { opacity: 0.7; }
+
+    .ex-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+      background: #1e1b4b;
+      color: #6366f1;
+      border: 1px solid #3730a3;
+    }
+
+    .exercise-item.done .ex-icon { background: #166534; color: #86efac; border-color: #166534; }
+    .exercise-item.active .ex-icon { background: #4f46e5; color: white; border-color: #6366f1; }
+
+    .ex-info { flex: 1; min-width: 0; }
+    .ex-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ex-level {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-top: 2px;
+    }
+
+    .level-badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+    .badge-debutant { background: #1e3a5f; color: #60a5fa; }
+    .badge-intermediaire { background: #3b1f5e; color: #c084fc; }
+    .badge-avance { background: #5e1f1f; color: #f87171; }
+
+    /* Main */
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      overflow: hidden;
+    }
+
+    .exercise-header {
+      padding: 20px 28px;
+      background: #13131f;
+      border-bottom: 1px solid #1e1b4b;
+    }
+
+    .exercise-header h2 { font-size: 1.1rem; font-weight: 700; margin-bottom: 8px; }
+    .exercise-header p { font-size: 0.9rem; color: #94a3b8; line-height: 1.6; }
+
+    .hint-box {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: #1e1b4b;
+      border-left: 3px solid #6366f1;
+      border-radius: 4px;
+      font-size: 0.82rem;
+      color: #a5b4fc;
+      display: none;
+    }
+
+    .editor-zone {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+    }
+
+    .editor-panel, .output-panel {
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .panel-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #475569;
+      padding: 8px 16px;
+      background: #0d0d1a;
+      border-bottom: 1px solid #1e1b4b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+    }
+    .dot-blue { background: #6366f1; }
+    .dot-green { background: #22c55e; }
+
+    textarea#code-editor {
+      flex: 1;
+      background: #0a0a16;
+      color: #e2e8f0;
+      border: none;
+      padding: 16px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.7;
+      resize: none;
+      outline: none;
+      border-right: 1px solid #1e1b4b;
+      tab-size: 4;
+    }
+
+    #output {
+      flex: 1;
+      padding: 16px;
+      font-family: 'Fira Code', 'Courier New', monospace;
+      font-size: 0.88rem;
+      line-height: 1.7;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      color: #94a3b8;
+    }
+
+    #output.success { color: #86efac; }
+    #output.error { color: #f87171; }
+
+    .expected-box {
+      padding: 10px 16px;
+      background: #0d1f1a;
+      border-top: 1px solid #166534;
+      font-size: 0.78rem;
+      color: #4ade80;
+      font-family: monospace;
+    }
+
+    .expected-box span { color: #166534; font-weight: 700; margin-right: 6px; }
+
+    /* Footer toolbar */
+    .toolbar {
+      padding: 12px 28px;
+      background: #0d0d1a;
+      border-top: 1px solid #1e1b4b;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    button {
+      padding: 9px 20px;
+      border-radius: 8px;
+      border: none;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    #btn-run {
+      background: #4f46e5;
+      color: white;
+    }
+    #btn-run:hover { background: #6366f1; }
+
+    #btn-check {
+      background: #166534;
+      color: #86efac;
+    }
+    #btn-check:hover { background: #15803d; }
+
+    #btn-hint {
+      background: transparent;
+      color: #6366f1;
+      border: 1px solid #3730a3;
+    }
+    #btn-hint:hover { background: #1e1b4b; }
+
+    #btn-reset {
+      background: transparent;
+      color: #475569;
+      border: 1px solid #1e293b;
+      margin-left: auto;
+    }
+    #btn-reset:hover { color: #94a3b8; }
+
+    .status-msg {
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      display: none;
+    }
+    .status-msg.ok { background: #166534; color: #86efac; display: inline-block; }
+    .status-msg.fail { background: #7f1d1d; color: #f87171; display: inline-block; }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 3px;
+      background: #1e1b4b;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #4f46e5, #7c3aed);
+      transition: width 0.4s ease;
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f0f1a; }
+    ::-webkit-scrollbar-thumb { background: #2d2d4e; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="snake">🐍</div>
+  <div>
+    <h1>Python Trainer</h1>
+    <p>Progresse étape par étape en codant directement dans le navigateur</p>
+  </div>
+</header>
+
+<div class="progress-bar">
+  <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+</div>
+
+<div class="layout">
+  <aside class="sidebar" id="sidebar"></aside>
+
+  <div class="main">
+    <div class="exercise-header">
+      <h2 id="ex-title">Chargement...</h2>
+      <p id="ex-description"></p>
+      <div class="hint-box" id="hint-box"></div>
+    </div>
+
+    <div class="editor-zone">
+      <div class="editor-panel">
+        <div class="panel-label"><span class="dot dot-blue"></span> Ton code</div>
+        <textarea id="code-editor" spellcheck="false"></textarea>
+      </div>
+      <div class="output-panel">
+        <div class="panel-label"><span class="dot dot-green"></span> Résultat</div>
+        <div id="output">▶ Clique sur "Exécuter" pour lancer ton code...</div>
+        <div class="expected-box"><span>Attendu :</span><span id="expected-display"></span></div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button id="btn-run">▶ Exécuter</button>
+      <button id="btn-check">✓ Valider</button>
+      <button id="btn-hint">💡 Indice</button>
+      <span class="status-msg" id="status-msg"></span>
+      <button id="btn-reset">↺ Réinitialiser</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const exercises = [
+  {
+    id: 1,
+    level: "debutant",
+    name: "Somme d'une liste",
+    description: "Crée une fonction `somme(liste)` qui retourne la somme de tous les éléments d'une liste.\n\nEx : somme([1, 2, 3, 4]) → 10",
+    hint: "Tu peux utiliser une boucle for, ou directement la fonction intégrée sum() de Python.",
+    starter: `def somme(liste):
+    # Ton code ici
+    pass
+
+# Test
+print(somme([1, 2, 3, 4]))
+print(somme([10, 20, 30]))`,
+    expected: "10\n60",
+    check: (output) => output.trim() === "10\n60"
+  },
+  {
+    id: 2,
+    level: "debutant",
+    name: "Nombre pair ou impair",
+    description: "Crée une fonction `parite(n)` qui retourne la chaîne `\"pair\"` si n est pair, `\"impair\"` sinon.\n\nEx : parite(4) → pair | parite(7) → impair",
+    hint: "Utilise l'opérateur modulo % pour tester si un nombre est divisible par 2.",
+    starter: `def parite(n):
+    # Ton code ici
+    pass
+
+print(parite(4))
+print(parite(7))
+print(parite(0))`,
+    expected: "pair\nimpair\npair",
+    check: (output) => output.trim() === "pair\nimpair\npair"
+  },
+  {
+    id: 3,
+    level: "debutant",
+    name: "Inverser une chaîne",
+    description: "Crée une fonction `inverser(texte)` qui retourne la chaîne à l'envers.\n\nEx : inverser(\"bonjour\") → ruojnob",
+    hint: "En Python, tu peux inverser une chaîne avec le slicing : texte[::-1]",
+    starter: `def inverser(texte):
+    # Ton code ici
+    pass
+
+print(inverser("bonjour"))
+print(inverser("Python"))`,
+    expected: "ruojnob\nnohtyP",
+    check: (output) => output.trim() === "ruojnob\nnohtyP"
+  },
+  {
+    id: 4,
+    level: "intermediaire",
+    name: "Filtrer une liste",
+    description: "Crée une fonction `filtrer_pairs(liste)` qui retourne une nouvelle liste contenant uniquement les nombres pairs.\n\nEx : filtrer_pairs([1, 2, 3, 4, 5, 6]) → [2, 4, 6]",
+    hint: "Utilise une list comprehension : [x for x in liste if condition]",
+    starter: `def filtrer_pairs(liste):
+    # Ton code ici
+    pass
+
+print(filtrer_pairs([1, 2, 3, 4, 5, 6]))
+print(filtrer_pairs([10, 11, 12, 13]))`,
+    expected: "[2, 4, 6]\n[10, 12]",
+    check: (output) => output.trim() === "[2, 4, 6]\n[10, 12]"
+  },
+  {
+    id: 5,
+    level: "intermediaire",
+    name: "Compter les occurrences",
+    description: "Crée une fonction `compter_mots(texte)` qui retourne un dictionnaire avec chaque mot et son nombre d'occurrences.\n\nEx : compter_mots(\"je mange et je dors\") → {'je': 2, 'mange': 1, 'et': 1, 'dors': 1}",
+    hint: "Utilise un dictionnaire. Pour chaque mot, vérifie s'il est déjà dans le dict avec `if mot in dict`.",
+    starter: `def compter_mots(texte):
+    mots = texte.split()
+    resultat = {}
+    # Ton code ici
+    return resultat
+
+print(compter_mots("je mange et je dors"))`,
+    expected: "{'je': 2, 'mange': 1, 'et': 1, 'dors': 1}",
+    check: (output) => {
+      try {
+        const clean = output.trim();
+        return clean === "{'je': 2, 'mange': 1, 'et': 1, 'dors': 1}";
+      } catch { return false; }
+    }
+  },
+  {
+    id: 6,
+    level: "intermediaire",
+    name: "FizzBuzz",
+    description: "Affiche les nombres de 1 à 20.\n• Si divisible par 3 → affiche `Fizz`\n• Si divisible par 5 → affiche `Buzz`\n• Si divisible par 3 ET 5 → affiche `FizzBuzz`\n• Sinon → affiche le nombre",
+    hint: "Attention à l'ordre des conditions : teste FizzBuzz EN PREMIER avant Fizz et Buzz séparément.",
+    starter: `for i in range(1, 21):
+    # Ton code ici
+    pass`,
+    expected: "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz",
+    check: (output) => output.trim() === "1\n2\nFizz\n4\nBuzz\nFizz\n7\n8\nFizz\nBuzz\n11\nFizz\n13\n14\nFizzBuzz\n16\n17\nFizz\n19\nBuzz"
+  },
+  {
+    id: 7,
+    level: "avance",
+    name: "Classe Compte Bancaire",
+    description: "Crée une classe `CompteBancaire` avec :\n• Un attribut `solde` (initialisé à 0)\n• Une méthode `deposer(montant)` qui ajoute au solde\n• Une méthode `retirer(montant)` qui retire (si solde suffisant)\n• Une méthode `afficher()` qui affiche `Solde : X€`",
+    hint: "Dans __init__, initialise self.solde = 0. Dans retirer(), vérifie d'abord que montant <= self.solde.",
+    starter: `class CompteBancaire:
+    def __init__(self):
+        # Ton code ici
+        pass
+
+    def deposer(self, montant):
+        pass
+
+    def retirer(self, montant):
+        pass
+
+    def afficher(self):
+        pass
+
+# Test
+compte = CompteBancaire()
+compte.deposer(500)
+compte.retirer(200)
+compte.afficher()`,
+    expected: "Solde : 300€",
+    check: (output) => output.trim() === "Solde : 300€"
+  },
+  {
+    id: 8,
+    level: "avance",
+    name: "Récursivité : Fibonacci",
+    description: "Crée une fonction récursive `fibonacci(n)` qui retourne le n-ième terme de la suite de Fibonacci.\n\nFibonacci : 0, 1, 1, 2, 3, 5, 8, 13...\n• fib(0) = 0\n• fib(1) = 1\n• fib(n) = fib(n-1) + fib(n-2)",
+    hint: "Une fonction récursive s'appelle elle-même. N'oublie pas le cas de base : if n <= 1: return n",
+    starter: `def fibonacci(n):
+    # Ton code ici
+    pass
+
+for i in range(8):
+    print(fibonacci(i))`,
+    expected: "0\n1\n1\n2\n3\n5\n8\n13",
+    check: (output) => output.trim() === "0\n1\n1\n2\n3\n5\n8\n13"
+  }
+];
+
+let current = 0;
+let done = new Set(JSON.parse(localStorage.getItem('done') || '[]'));
+let hintVisible = false;
+
+function saveDone() {
+  localStorage.setItem('done', JSON.stringify([...done]));
+}
+
+function buildSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = `<div class="sidebar-title">Exercices (${done.size}/${exercises.length})</div>`;
+  exercises.forEach((ex, i) => {
+    const div = document.createElement('div');
+    div.className = 'exercise-item' +
+      (i === current ? ' active' : '') +
+      (done.has(ex.id) ? ' done' : '');
+    div.innerHTML = `
+      <div class="ex-icon">${done.has(ex.id) ? '✓' : ex.id}</div>
+      <div class="ex-info">
+        <div class="ex-name">${ex.name}</div>
+        <div class="ex-level">
+          <span class="level-badge badge-${ex.level}">${ex.level === 'debutant' ? 'Débutant' : ex.level === 'intermediaire' ? 'Intermédiaire' : 'Avancé'}</span>
+        </div>
+      </div>`;
+    div.onclick = () => { current = i; load(); };
+    sidebar.appendChild(div);
+  });
+}
+
+function updateProgress() {
+  const pct = (done.size / exercises.length) * 100;
+  document.getElementById('progress-fill').style.width = pct + '%';
+}
+
+function load() {
+  const ex = exercises[current];
+  document.getElementById('ex-title').textContent = `#${ex.id} — ${ex.name}`;
+  document.getElementById('ex-description').textContent = ex.description;
+  document.getElementById('hint-box').textContent = '💡 ' + ex.hint;
+  document.getElementById('hint-box').style.display = 'none';
+  document.getElementById('code-editor').value = ex.starter;
+  document.getElementById('output').textContent = '▶ Clique sur "Exécuter" pour lancer ton code...';
+  document.getElementById('output').className = '';
+  document.getElementById('expected-display').textContent = ex.expected;
+  document.getElementById('status-msg').className = 'status-msg';
+  document.getElementById('status-msg').textContent = '';
+  hintVisible = false;
+  buildSidebar();
+  updateProgress();
+}
+
+function runCode() {
+  const code = document.getElementById('code-editor').value;
+  const outputEl = document.getElementById('output');
+  let out = '';
+
+  outputEl.className = '';
+  outputEl.textContent = '';
+
+  Sk.configure({
+    output: (text) => { out += text; outputEl.textContent = out; },
+    read: (x) => {
+      if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+        throw "File not found: '" + x + "'";
+      return Sk.builtinFiles["files"][x];
+    }
+  });
+
+  Sk.misceval.asyncToPromise(() =>
+    Sk.importMainWithBody("<stdin>", false, code, true)
+  ).then(() => {
+    outputEl.className = 'success';
+  }).catch((err) => {
+    outputEl.className = 'error';
+    outputEl.textContent = '❌ Erreur :\n' + err.toString();
+  });
+}
+
+function checkCode() {
+  const code = document.getElementById('code-editor').value;
+  const outputEl = document.getElementById('output');
+  const statusEl = document.getElementById('status-msg');
+  let out = '';
+
+  Sk.configure({
+    output: (text) => { out += text; },
+    read: (x) => {
+      if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+        throw "File not found: '" + x + "'";
+      return Sk.builtinFiles["files"][x];
+    }
+  });
+
+  Sk.misceval.asyncToPromise(() =>
+    Sk.importMainWithBody("<stdin>", false, code, true)
+  ).then(() => {
+    const ex = exercises[current];
+    if (ex.check(out)) {
+      statusEl.textContent = '🎉 Bravo, exercice validé !';
+      statusEl.className = 'status-msg ok';
+      outputEl.className = 'success';
+      outputEl.textContent = out;
+      done.add(ex.id);
+      saveDone();
+      buildSidebar();
+      updateProgress();
+      if (current < exercises.length - 1) {
+        setTimeout(() => { current++; load(); }, 1500);
+      }
+    } else {
+      statusEl.textContent = '✗ Pas encore correct, réessaie !';
+      statusEl.className = 'status-msg fail';
+      outputEl.className = 'error';
+      outputEl.textContent = out || '(aucune sortie)';
+    }
+  }).catch((err) => {
+    statusEl.textContent = '✗ Erreur dans le code';
+    statusEl.className = 'status-msg fail';
+    outputEl.className = 'error';
+    outputEl.textContent = '❌ ' + err.toString();
+  });
+}
+
+document.getElementById('btn-run').onclick = runCode;
+document.getElementById('btn-check').onclick = checkCode;
+document.getElementById('btn-hint').onclick = () => {
+  hintVisible = !hintVisible;
+  document.getElementById('hint-box').style.display = hintVisible ? 'block' : 'none';
+};
+document.getElementById('btn-reset').onclick = () => {
+  document.getElementById('code-editor').value = exercises[current].starter;
+  document.getElementById('output').textContent = '▶ Clique sur "Exécuter" pour lancer ton code...';
+  document.getElementById('output').className = '';
+  document.getElementById('status-msg').className = 'status-msg';
+};
+
+document.getElementById('code-editor').addEventListener('keydown', (e) => {
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = e.target;
+    const start = s.selectionStart;
+    s.value = s.value.substring(0, start) + '    ' + s.value.substring(s.selectionEnd);
+    s.selectionStart = s.selectionEnd = start + 4;
+  }
+});
+
+load();
+</script>
+</body>
+</html>
